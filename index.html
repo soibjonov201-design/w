@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mini Games Hub — Play 10 Interactive Browser Games</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.55);
+    }
+
+    /* Card hover lift & glow */
+    .game-card {
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .game-card:hover {
+      transform: translateY(-6px);
+    }
+
+    /* Memory Card 3D Flip */
+    .memory-card {
+      perspective: 800px;
+    }
+    .memory-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+    .memory-card.flipped .memory-inner,
+    .memory-card.matched .memory-inner {
+      transform: rotateY(180deg);
+    }
+    .memory-front, .memory-back {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .memory-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Tile pop animation for 2048 & Block Blast */
+    @keyframes popIn {
+      0% { transform: scale(0.75); opacity: 0.5; }
+      70% { transform: scale(1.06); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.2s ease-out forwards;
+    }
+
+    @keyframes flashClear {
+      0% { background-color: #fde047; transform: scale(1.08); }
+      100% { opacity: 0; transform: scale(0.8); }
+    }
+    .animate-clear {
+      animation: flashClear 0.28s ease-out forwards;
+    }
+
+    /* Prevent touch scroll inside active game boards */
+    .no-touch-scroll {
+      touch-action: none;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/80 dark:border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <!-- Logo -->
+      <button id="logoBtn" class="flex items-center gap-2.5 text-left group focus:outline-none shrink-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+          <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="4" />
+            <path d="M6 12h4M8 10v4" />
+            <circle cx="15" cy="11" r="1" fill="currentColor" />
+            <circle cx="18" cy="13" r="1" fill="currentColor" />
+          </svg>
+        </div>
+        <div>
+          <span class="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+            Mini Games Hub
+          </span>
+        </div>
+      </button>
+
+      <!-- Desktop Nav Links -->
+      <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">
+        <button data-nav="home" class="nav-link px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all">Home</button>
+        <button data-nav="games" class="nav-link px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all">Games</button>
+        <button data-nav="favorites" class="nav-link px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5">
+          Favorites
+          <span id="navFavBadge" class="text-xs px-1.5 py-0.2 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">0</span>
+        </button>
+        <button data-nav="about" class="nav-link px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all">About</button>
+      </nav>
+
+      <!-- Search + Theme Toggle -->
+      <div class="flex items-center gap-2 sm:gap-3 flex-1 md:flex-initial justify-end max-w-xs sm:max-w-sm">
+        <div class="relative flex-1 sm:w-56">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search games..."
+            class="w-full pl-9 pr-7 py-2 text-sm rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all placeholder:text-slate-400"
+          />
+          <button id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold">✕</button>
+        </div>
+
+        <button
+          id="themeToggleBtn"
+          aria-label="Toggle Light/Dark Mode"
+          class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors shrink-0"
+          title="Switch Light/Dark Theme"
+        >
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg id="sunIcon" class="w-5 h-5 hidden dark:block text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg id="moonIcon" class="w-5 h-5 block dark:hidden text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Strip -->
+    <div class="flex md:hidden items-center justify-around border-t border-slate-200/70 dark:border-slate-800/70 px-2 py-1.5 bg-white/90 dark:bg-slate-900/90">
+      <button data-nav="home" class="nav-link flex-1 py-1.5 rounded-lg text-xs font-semibold text-center">Home</button>
+      <button data-nav="games" class="nav-link flex-1 py-1.5 rounded-lg text-xs font-semibold text-center">Games</button>
+      <button data-nav="favorites" class="nav-link flex-1 py-1.5 rounded-lg text-xs font-semibold text-center">Favorites</button>
+      <button data-nav="about" class="nav-link flex-1 py-1.5 rounded-lg text-xs font-semibold text-center">About</button>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- VIEW: HOME -->
+    <section id="view-home" class="space-y-10">
+      <!-- Hero Welcome Banner -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-6 sm:p-10 text-white shadow-xl shadow-indigo-500/20">
+        <div class="absolute -right-16 -top-16 w-72 h-72 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+        <div class="absolute -left-16 -bottom-20 w-72 h-72 rounded-full bg-indigo-950/30 blur-2xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div class="max-w-2xl space-y-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-bold uppercase tracking-wider">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              10 Instant Play Browser Games
+            </div>
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+              Play Smart, Relax & Beat Your High Scores
+            </h1>
+            <p class="text-indigo-100 text-sm sm:text-base max-w-xl leading-relaxed">
+              Welcome to Mini Games Hub — a fast, distraction-free arcade and puzzle playground. No downloads, instant loading, and automatic score saving.
+            </p>
+            <div class="flex flex-wrap items-center gap-3 pt-1">
+              <button id="heroPlayRandomBtn" class="px-5 py-3 rounded-xl bg-white text-indigo-700 font-bold text-sm shadow-lg hover:bg-indigo-50 active:scale-95 transition-all flex items-center gap-2">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Quick Play Random
+              </button>
+              <button data-nav="games" class="nav-trigger px-5 py-3 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-white font-semibold text-sm transition-all">
+                Browse All 10 Games
+              </button>
+            </div>
+          </div>
+
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-3 lg:grid-cols-1 gap-3 sm:gap-4 shrink-0 lg:w-64">
+            <div class="bg-white/15 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
+              <div class="text-xs text-indigo-100 font-medium">Games Played</div>
+              <div id="statGamesPlayed" class="text-xl sm:text-2xl font-extrabold mt-0.5">0 / 10</div>
+            </div>
+            <div class="bg-white/15 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
+              <div class="text-xs text-indigo-100 font-medium">Total Best Score</div>
+              <div id="statTotalScore" class="text-xl sm:text-2xl font-extrabold mt-0.5">0</div>
+            </div>
+            <div class="bg-white/15 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
+              <div class="text-xs text-indigo-100 font-medium">Favorites</div>
+              <div id="statFavoritesCount" class="text-xl sm:text-2xl font-extrabold mt-0.5">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Filter & Main Grid -->
+      <div class="space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight">Explore Games</h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Filter by genre or search any title instantly</p>
+          </div>
+          <!-- Category Tabs -->
+          <div id="categoryTabs" class="flex items-center gap-2 overflow-x-auto pb-1">
+            <button data-cat="All" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">All Games</button>
+            <button data-cat="Puzzle" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">Puzzle</button>
+            <button data-cat="Arcade" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">Arcade</button>
+            <button data-cat="Logic" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">Logic</button>
+          </div>
+        </div>
+
+        <div id="homeGamesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+      </div>
+
+      <!-- Popular & New Curated Sections -->
+      <div id="curatedSections" class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-2">
+        <!-- Popular Games -->
+        <div class="space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-extrabold uppercase tracking-wider">🔥 Popular</span>
+            <h3 class="text-lg font-extrabold">Player Favorites</h3>
+          </div>
+          <div id="popularGamesList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- New Releases -->
+        <div class="space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-extrabold uppercase tracking-wider">✨ New</span>
+            <h3 class="text-lg font-extrabold">Fresh Additions</h3>
+          </div>
+          <div id="newGamesList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: ALL GAMES -->
+    <section id="view-games" class="hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">All Mini Games</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Choose any game below to start playing immediately</p>
+        </div>
+        <div id="gamesPageCategoryTabs" class="flex items-center gap-2 overflow-x-auto pb-1">
+          <button data-cat="All" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">All Games</button>
+          <button data-cat="Puzzle" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">Puzzle</button>
+          <button data-cat="Arcade" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">Arcade</button>
+          <button data-cat="Logic" class="cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0">Logic</button>
+        </div>
+      </div>
+      <div id="allGamesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+    </section>
+
+    <!-- VIEW: FAVORITES -->
+    <section id="view-favorites" class="hidden space-y-6">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Your Favorite Games</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Quick access to the games you hearted</p>
+      </div>
+      <div id="favoritesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+      <div id="emptyFavoritesState" class="hidden text-center py-16 px-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mb-4">
+          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold">No favorite games yet</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1 mb-5">
+          Click the heart icon on any game card to save it here for instant access.
+        </p>
+        <button data-nav="games" class="nav-trigger px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-colors">
+          Discover Games
+        </button>
+      </div>
+    </section>
+
+    <!-- VIEW: ABOUT -->
+    <section id="view-about" class="hidden max-w-4xl mx-auto space-y-6">
+      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-pink-500 flex items-center justify-center text-white font-extrabold text-xl">
+            M
+          </div>
+          <div>
+            <h1 class="text-2xl font-extrabold">About Mini Games Hub</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Lightweight, responsive, zero-backend browser gaming platform</p>
+          </div>
+        </div>
+
+        <p class="text-slate-600 dark:text-slate-300 leading-relaxed text-sm sm:text-base">
+          <strong>Mini Games Hub</strong> brings together 10 handcrafted classic arcade, puzzle, and logic games in a clean, fast interface. Every game runs locally in your browser with full keyboard, mouse, and touch support, saving your personal best scores and favorites automatically in <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs">localStorage</code>.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+            <h3 class="font-bold text-sm mb-1">Puzzle Collection</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Block Blast, 2048, and Picture Sliding Puzzle for spatial strategy.</p>
+          </div>
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+            <h3 class="font-bold text-sm mb-1">Arcade Action</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Tetris, Snake, Flappy Bird, and Color Match for quick reflexes.</p>
+          </div>
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+            <h3 class="font-bold text-sm mb-1">Logic Brainteasers</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Minesweeper, Memory Match, and Sudoku for deep focus.</p>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 class="font-bold text-sm text-rose-600 dark:text-rose-400">Reset Saved Progress</h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Clear all stored high scores and favorite games from this browser.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="resetDataBtn" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors">
+              Reset All Data
+            </button>
+            <span id="resetConfirmToast" class="hidden text-xs font-semibold text-emerald-600 dark:text-emerald-400">✓ Data cleared!</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- GAME PLAYER MODAL -->
+  <div id="gameModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[96vh]">
+      
+      <!-- Modal Top Bar -->
+      <div class="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/90">
+        <div class="flex items-center gap-3">
+          <button id="closeModalBtn" class="p-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors" title="Back to Hub">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="modalGameTitle" class="font-extrabold text-base sm:text-lg leading-tight">Game Title</h2>
+              <span id="modalGameCategory" class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">Category</span>
+            </div>
+            <p id="modalGameHint" class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">Controls hint</p>
+          </div>
+        </div>
+
+        <!-- Scoreboard & Controls -->
+        <div class="flex items-center gap-2 sm:gap-3 ml-auto">
+          <div class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-center min-w-[72px]">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Score</div>
+            <div id="modalScore" class="text-sm sm:text-base font-extrabold text-indigo-600 dark:text-indigo-400">0</div>
+          </div>
+          <div class="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center min-w-[72px]">
+            <div class="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">Best</div>
+            <div id="modalBestScore" class="text-sm sm:text-base font-extrabold text-amber-600 dark:text-amber-400">0</div>
+          </div>
+          <button id="modalFavBtn" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/15 transition-colors" title="Toggle Favorite">
+            <svg id="modalFavIcon" class="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </button>
+          <button id="restartGameBtn" class="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            <span class="hidden sm:inline">Restart</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Game Stage -->
+      <div id="gameStage" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col items-center justify-center min-h-[420px] bg-slate-100/70 dark:bg-slate-950/60 relative">
+        <!-- Game content injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-slate-800/80 py-6 mt-12 bg-white/50 dark:bg-slate-900/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+      <div class="font-semibold">Mini Games Hub — Built for instant browser fun.</div>
+      <div>All high scores & favorites are saved locally on your device.</div>
+    </div>
+  </footer>
+
+  <script>
+    /*************************************************************************
+     * 1. STATE, STORAGE & GAME CATALOG METADATA
+     *************************************************************************/
+    const STORAGE_KEYS = {
+      SCORES: 'mgh_best_scores_v1',
+      FAVORITES: 'mgh_favorites_v1',
+      THEME: 'mgh_theme_v1'
+    };
+
+    const GAMES = [
+      {
+        id: 'block-blast',
+        title: 'Block Blast',
+        category: 'Puzzle',
+        tag: 'Popular',
+        description: 'Place polyomino block shapes on an 8×8 grid to clear full rows and columns.',
+        hint: 'Click or drag a piece onto the 8×8 grid. Clear rows & columns for combos!',
+        gradient: 'from-blue-500 via-indigo-500 to-violet-600',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="22" y="12" width="16" height="16" rx="4" fill="#60a5fa"/>
+          <rect x="40" y="12" width="16" height="16" rx="4" fill="#60a5fa"/>
+          <rect x="58" y="12" width="16" height="16" rx="4" fill="#38bdf8"/>
+          <rect x="22" y="30" width="16" height="16" rx="4" fill="#818cf8"/>
+          <rect x="40" y="30" width="16" height="16" rx="4" fill="#f472b6"/>
+          <rect x="58" y="30" width="16" height="16" rx="4" fill="#f472b6"/>
+          <rect x="76" y="30" width="16" height="16" rx="4" fill="#fb7185"/>
+          <rect x="40" y="48" width="16" height="16" rx="4" fill="#34d399"/>
+          <rect x="58" y="48" width="16" height="16" rx="4" fill="#34d399"/>
+        </svg>`
+      },
+      {
+        id: 'tetris',
+        title: 'Tetris',
+        category: 'Arcade',
+        tag: 'Popular',
+        description: 'Stack falling tetrominoes, rotate pieces, and clear horizontal lines.',
+        hint: 'Arrow Keys / WASD or on-screen buttons to Move, Rotate & Drop.',
+        gradient: 'from-cyan-500 via-blue-600 to-indigo-700',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <g stroke="rgba(255,255,255,0.25)" stroke-width="1">
+            <rect x="44" y="10" width="14" height="14" rx="3" fill="#22d3ee"/>
+            <rect x="44" y="24" width="14" height="14" rx="3" fill="#22d3ee"/>
+            <rect x="44" y="38" width="14" height="14" rx="3" fill="#22d3ee"/>
+            <rect x="58" y="38" width="14" height="14" rx="3" fill="#22d3ee"/>
+            <rect x="24" y="54" width="14" height="14" rx="3" fill="#facc15"/>
+            <rect x="38" y="54" width="14" height="14" rx="3" fill="#facc15"/>
+            <rect x="52" y="54" width="14" height="14" rx="3" fill="#a855f7"/>
+            <rect x="66" y="54" width="14" height="14" rx="3" fill="#a855f7"/>
+            <rect x="80" y="54" width="14" height="14" rx="3" fill="#fb7185"/>
+          </g>
+        </svg>`
+      },
+      {
+        id: '2048',
+        title: '2048',
+        category: 'Puzzle',
+        tag: 'Popular',
+        description: 'Slide and merge matching numbered tiles to reach the legendary 2048 tile.',
+        hint: 'Use Arrow Keys, WASD, Swipe, or D-Pad buttons to slide tiles.',
+        gradient: 'from-amber-500 via-orange-500 to-rose-500',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="26" y="10" width="32" height="28" rx="6" fill="#fef3c7"/>
+          <text x="42" y="28" text-anchor="middle" font-size="11" font-weight="800" fill="#92400e">512</text>
+          <rect x="62" y="10" width="32" height="28" rx="6" fill="#fde68a"/>
+          <text x="78" y="28" text-anchor="middle" font-size="10" font-weight="800" fill="#92400e">1024</text>
+          <rect x="26" y="42" width="68" height="28" rx="6" fill="#f59e0b"/>
+          <text x="60" y="61" text-anchor="middle" font-size="14" font-weight="900" fill="#ffffff">2048</text>
+        </svg>`
+      },
+      {
+        id: 'snake',
+        title: 'Snake',
+        category: 'Arcade',
+        tag: 'Popular',
+        description: 'Guide the neon serpent to eat glowing energy orbs without crashing.',
+        hint: 'Arrow Keys / WASD or D-Pad buttons to steer the snake.',
+        gradient: 'from-emerald-500 via-teal-500 to-cyan-600',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <path d="M24 54 H58 V28 H84" fill="none" stroke="#34d399" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="84" cy="28" r="7" fill="#10b981"/>
+          <circle cx="86" cy="26" r="1.5" fill="#fff"/>
+          <circle cx="86" cy="30" r="1.5" fill="#fff"/>
+          <circle cx="96" cy="52" r="5.5" fill="#fb7185"/>
+        </svg>`
+      },
+      {
+        id: 'minesweeper',
+        title: 'Minesweeper',
+        category: 'Logic',
+        tag: 'Classic',
+        description: 'Use number clues to deduce where all 12 hidden mines are buried.',
+        hint: 'Click/Tap to reveal. Right-click or toggle Flag Mode to mark mines.',
+        gradient: 'from-slate-600 via-slate-700 to-zinc-800',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="26" y="12" width="20" height="20" rx="4" fill="#cbd5e1"/>
+          <text x="36" y="26" text-anchor="middle" font-size="12" font-weight="800" fill="#2563eb">1</text>
+          <rect x="50" y="12" width="20" height="20" rx="4" fill="#cbd5e1"/>
+          <text x="60" y="26" text-anchor="middle" font-size="12" font-weight="800" fill="#16a34a">2</text>
+          <rect x="74" y="12" width="20" height="20" rx="4" fill="#475569"/>
+          <path d="M81 17 L89 21 L81 25 Z" fill="#f43f5e"/>
+          <line x1="81" y1="16" x2="81" y2="28" stroke="#fff" stroke-width="1.5"/>
+          <rect x="26" y="36" width="20" height="20" rx="4" fill="#475569"/>
+          <rect x="50" y="36" width="20" height="20" rx="4" fill="#ef4444"/>
+          <circle cx="60" cy="46" r="5" fill="#1e293b"/>
+          <rect x="74" y="36" width="20" height="20" rx="4" fill="#cbd5e1"/>
+          <text x="84" y="50" text-anchor="middle" font-size="12" font-weight="800" fill="#dc2626">3</text>
+        </svg>`
+      },
+      {
+        id: 'memory-game',
+        title: 'Memory Game',
+        category: 'Logic',
+        tag: 'New',
+        description: 'Flip cards and remember icon positions to pair all 8 matching sets.',
+        hint: 'Tap cards to flip them over and match identical pairs in fewer moves.',
+        gradient: 'from-fuchsia-500 via-purple-600 to-indigo-600',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="24" y="14" width="22" height="24" rx="5" fill="#fff" opacity="0.95"/>
+          <circle cx="35" cy="26" r="5" fill="#ec4899"/>
+          <rect x="50" y="14" width="22" height="24" rx="5" fill="rgba(255,255,255,0.22)" stroke="#fff" stroke-width="1.5"/>
+          <text x="61" y="30" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">?</text>
+          <rect x="76" y="14" width="22" height="24" rx="5" fill="#fff" opacity="0.95"/>
+          <circle cx="87" cy="26" r="5" fill="#ec4899"/>
+          <rect x="37" y="42" width="22" height="24" rx="5" fill="rgba(255,255,255,0.22)" stroke="#fff" stroke-width="1.5"/>
+          <rect x="63" y="42" width="22" height="24" rx="5" fill="rgba(255,255,255,0.22)" stroke="#fff" stroke-width="1.5"/>
+        </svg>`
+      },
+      {
+        id: 'sudoku',
+        title: 'Sudoku',
+        category: 'Logic',
+        tag: 'Classic',
+        description: 'Fill the 9×9 grid so every row, column, and 3×3 box contains digits 1–9.',
+        hint: 'Select an empty cell and use the number pad (1–9) or keyboard keys.',
+        gradient: 'from-sky-500 via-blue-600 to-indigo-600',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="30" y="10" width="60" height="60" rx="6" fill="rgba(255,255,255,0.92)"/>
+          <line x1="50" y1="10" x2="50" y2="70" stroke="#6366f1" stroke-width="1.8"/>
+          <line x1="70" y1="10" x2="70" y2="70" stroke="#6366f1" stroke-width="1.8"/>
+          <line x1="30" y1="30" x2="90" y2="30" stroke="#6366f1" stroke-width="1.8"/>
+          <line x1="30" y1="50" x2="90" y2="50" stroke="#6366f1" stroke-width="1.8"/>
+          <text x="40" y="24" text-anchor="middle" font-size="11" font-weight="800" fill="#1e293b">9</text>
+          <text x="60" y="44" text-anchor="middle" font-size="11" font-weight="800" fill="#4f46e5">5</text>
+          <text x="80" y="64" text-anchor="middle" font-size="11" font-weight="800" fill="#1e293b">1</text>
+        </svg>`
+      },
+      {
+        id: 'color-match',
+        title: 'Color Match',
+        category: 'Arcade',
+        tag: 'New',
+        description: 'Test your brain reflexes! Decide if the word meaning matches its ink color.',
+        hint: 'Press Left/Right Arrow or click MATCH / NO MATCH before time runs out!',
+        gradient: 'from-rose-500 via-pink-500 to-amber-500',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="20" y="14" width="80" height="28" rx="8" fill="#ffffff"/>
+          <text x="60" y="33" text-anchor="middle" font-size="14" font-weight="900" fill="#2563eb">RED</text>
+          <rect x="22" y="48" width="35" height="18" rx="6" fill="#10b981"/>
+          <text x="39.5" y="60" text-anchor="middle" font-size="8" font-weight="800" fill="#fff">YES</text>
+          <rect x="63" y="48" width="35" height="18" rx="6" fill="#ef4444"/>
+          <text x="80.5" y="60" text-anchor="middle" font-size="8" font-weight="800" fill="#fff">NO</text>
+        </svg>`
+      },
+      {
+        id: 'flappy-bird',
+        title: 'Flappy Bird',
+        category: 'Arcade',
+        tag: 'Popular',
+        description: 'Tap to flap through narrow emerald pipe gaps and set an unbeatable streak.',
+        hint: 'Click, Tap, or press Space / Up Arrow to flap wings.',
+        gradient: 'from-sky-400 via-cyan-500 to-emerald-500',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="74" y="0" width="16" height="24" fill="#10b981"/>
+          <rect x="72" y="20" width="20" height="6" rx="2" fill="#059669"/>
+          <rect x="74" y="52" width="16" height="28" fill="#10b981"/>
+          <rect x="72" y="50" width="20" height="6" rx="2" fill="#059669"/>
+          <circle cx="44" cy="38" r="9" fill="#facc15"/>
+          <circle cx="47" cy="35" r="2" fill="#1e293b"/>
+          <polygon points="52,38 59,41 52,43" fill="#f97316"/>
+        </svg>`
+      },
+      {
+        id: 'puzzle-game',
+        title: 'Puzzle Game',
+        category: 'Puzzle',
+        tag: 'New',
+        description: 'Reconstruct the vibrant geometric landscape artwork by sliding tiles into place.',
+        hint: 'Click any tile adjacent to the empty space to slide it into position.',
+        gradient: 'from-violet-500 via-purple-500 to-fuchsia-600',
+        svg: `<svg viewBox="0 0 120 80" class="w-full h-full">
+          <rect x="30" y="10" width="18" height="18" rx="3" fill="#fde047"/>
+          <rect x="51" y="10" width="18" height="18" rx="3" fill="#fb923c"/>
+          <rect x="72" y="10" width="18" height="18" rx="3" fill="#f472b6"/>
+          <rect x="30" y="31" width="18" height="18" rx="3" fill="#38bdf8"/>
+          <rect x="51" y="31" width="18" height="18" rx="3" fill="#818cf8"/>
+          <rect x="72" y="31" width="18" height="18" rx="3" fill="#34d399"/>
+          <rect x="30" y="52" width="18" height="18" rx="3" fill="#2dd4bf"/>
+          <rect x="51" y="52" width="18" height="18" rx="3" fill="#a78bfa"/>
+          <rect x="72" y="52" width="18" height="18" rx="3" fill="rgba(255,255,255,0.18)" stroke="#fff" stroke-dasharray="3 2"/>
+        </svg>`
+      }
+    ];
+
+    let appState = {
+      view: 'home',
+      category: 'All',
+      search: '',
+      scores: JSON.parse(localStorage.getItem(STORAGE_KEYS.SCORES) || '{}'),
+      favorites: JSON.parse(localStorage.getItem(STORAGE_KEYS.FAVORITES) || '[]'),
+      activeGameId: null,
+      currentScore: 0,
+      cleanupFn: null
+    };
+
+    function saveScores() {
+      localStorage.setItem(STORAGE_KEYS.SCORES, JSON.stringify(appState.scores));
+      updateStatsUI();
+    }
+
+    function saveFavorites() {
+      localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(appState.favorites));
+      updateStatsUI();
+    }
+
+    function getBestScore(gameId) {
+      return appState.scores[gameId] || 0;
+    }
+
+    function updateGameScore(newScore) {
+      appState.currentScore = newScore;
+      const scoreEl = document.getElementById('modalScore');
+      if (scoreEl) scoreEl.textContent = newScore;
+
+      if (appState.activeGameId && newScore > getBestScore(appState.activeGameId)) {
+        appState.scores[appState.activeGameId] = newScore;
+        saveScores();
+        const bestEl = document.getElementById('modalBestScore');
+        if (bestEl) bestEl.textContent = newScore;
+      }
+    }
+
+    /*************************************************************************
+     * 2. THEME & NAVIGATION UI
+     *************************************************************************/
+    function initTheme() {
+      const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    }
+
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
+    });
+
+    function switchView(viewName) {
+      appState.view = viewName;
+      ['home', 'games', 'favorites', 'about'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.toggle('hidden', v !== viewName);
+      });
+
+      document.querySelectorAll('.nav-link').forEach(btn => {
+        const active = btn.dataset.nav === viewName;
+        if (active) {
+          btn.classList.add('bg-white', 'dark:bg-slate-900', 'text-indigo-600', 'dark:text-indigo-400', 'shadow-sm');
+          btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+        } else {
+          btn.classList.remove('bg-white', 'dark:bg-slate-900', 'text-indigo-600', 'dark:text-indigo-400', 'shadow-sm');
+          btn.classList.add('text-slate-600', 'dark:text-slate-300');
+        }
+      });
+
+      renderAllViews();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.querySelectorAll('[data-nav]').forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.dataset.nav));
+    });
+
+    document.getElementById('logoBtn').addEventListener('click', () => {
+      appState.category = 'All';
+      appState.search = '';
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      switchView('home');
+    });
+
+    // Search Bar
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    searchInput.addEventListener('input', (e) => {
+      appState.search = e.target.value.trim().toLowerCase();
+      clearSearchBtn.classList.toggle('hidden', !appState.search);
+      renderAllViews();
+    });
+    clearSearchBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      appState.search = '';
+      clearSearchBtn.classList.add('hidden');
+      renderAllViews();
+    });
+
+    // Category Filter Tabs
+    function setCategory(cat) {
+      appState.category = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        const isSelected = btn.dataset.cat === cat;
+        if (isSelected) {
+          btn.className = 'cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 bg-indigo-600 text-white shadow-md shadow-indigo-500/25';
+        } else {
+          btn.className = 'cat-btn px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-indigo-400';
+        }
+      });
+      renderAllViews();
+    }
+
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => setCategory(btn.dataset.cat));
+    });
+
+    // Toggle Favorite
+    function toggleFavorite(gameId, e) {
+      if (e) e.stopPropagation();
+      const idx = appState.favorites.indexOf(gameId);
+      if (idx === -1) {
+        appState.favorites.push(gameId);
+      } else {
+        appState.favorites.splice(idx, 1);
+      }
+      saveFavorites();
+      renderAllViews();
+      updateModalFavIcon();
+    }
+
+    function updateStatsUI() {
+      const playedCount = Object.values(appState.scores).filter(s => s > 0).length;
+      const totalScore = Object.values(appState.scores).reduce((acc, v) => acc + v, 0);
+      const favCount = appState.favorites.length;
+
+      document.getElementById('statGamesPlayed').textContent = `${playedCount} / ${GAMES.length}`;
+      document.getElementById('statTotalScore').textContent = totalScore.toLocaleString();
+      document.getElementById('statFavoritesCount').textContent = favCount;
+      document.getElementById('navFavBadge').textContent = favCount;
+    }
+
+    /*************************************************************************
+     * 3. RENDER GAME CARDS & SECTIONS
+     *************************************************************************/
+    function createGameCardHTML(game) {
+      const isFav = appState.favorites.includes(game.id);
+      const best = getBestScore(game.id);
+      return `
+        <div onclick="openGameModal('${game.id}')" class="game-card cursor-pointer group rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-400/60 dark:hover:border-indigo-500/50 flex flex-col">
+          <!-- Illustrated Artwork Banner -->
+          <div class="relative h-36 bg-gradient-to-br ${game.gradient} p-3 flex items-center justify-center overflow-hidden">
+            <div class="w-36 h-24 transform group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+              ${game.svg}
+            </div>
+            <!-- Category Pill -->
+            <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/30 backdrop-blur-md text-white text-[11px] font-bold">
+              ${game.category}
+            </span>
+            <!-- Favorite Heart -->
+            <button
+              onclick="toggleFavorite('${game.id}', event)"
+              aria-label="Favorite ${game.title}"
+              class="absolute top-2.5 right-2.5 w-8 h-8 rounded-xl bg-black/25 hover:bg-black/45 backdrop-blur-md flex items-center justify-center transition-transform active:scale-90"
+            >
+              <svg class="w-4 h-4 ${isFav ? 'text-rose-400 fill-rose-400' : 'text-white'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Card Body -->
+          <div class="p-4 flex-1 flex flex-col justify-between gap-4">
+            <div>
+              <div class="flex items-center justify-between gap-2">
+                <h3 class="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  ${game.title}
+                </h3>
+                ${best > 0 ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400">★ ${best}</span>` : ''}
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">
+                ${game.description}
+              </p>
+            </div>
+
+            <button class="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 group-hover:bg-indigo-600 text-slate-800 dark:text-slate-100 group-hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Play Now
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function createCompactCardHTML(game) {
+      const best = getBestScore(game.id);
+      return `
+        <div onclick="openGameModal('${game.id}')" class="cursor-pointer group flex items-center gap-3.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/60 transition-all shadow-sm">
+          <div class="w-16 h-16 rounded-xl bg-gradient-to-br ${game.gradient} p-1.5 shrink-0 flex items-center justify-center">
+            ${game.svg}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-sm truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">${game.title}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">${game.category} • Best: ${best}</div>
+          </div>
+          <span class="px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white text-xs font-bold transition-colors">
+            Play
+          </span>
+        </div>
+      `;
+    }
+
+    function getFilteredGames() {
+      return GAMES.filter(g => {
+        const matchesCat = appState.category === 'All' || g.category === appState.category;
+        const matchesSearch = !appState.search ||
+          g.title.toLowerCase().includes(appState.search) ||
+          g.category.toLowerCase().includes(appState.search) ||
+          g.description.toLowerCase().includes(appState.search);
+        return matchesCat && matchesSearch;
+      });
+    }
+
+    function renderAllViews() {
+      const filtered = getFilteredGames();
+      const emptyHTML = `
+        <div class="col-span-full text-center py-12 px-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <p class="font-bold text-slate-700 dark:text-slate-200">No games matched "${appState.search}"</p>
+          <p class="text-xs text-slate-500 mt-1">Try clearing your search or switching to All Games.</p>
+        </div>
+      `;
+
+      const cardsHTML = filtered.length ? filtered.map(createGameCardHTML).join('') : emptyHTML;
+      document.getElementById('homeGamesGrid').innerHTML = cardsHTML;
+      document.getElementById('allGamesGrid').innerHTML = cardsHTML;
+
+      // Curated sections
+      document.getElementById('popularGamesList').innerHTML = GAMES.filter(g => g.tag === 'Popular').slice(0, 4).map(createCompactCardHTML).join('');
+      document.getElementById('newGamesList').innerHTML = GAMES.filter(g => g.tag === 'New' || g.tag === 'Classic').slice(0, 4).map(createCompactCardHTML).join('');
+
+      // Favorites grid
+      const favGames = GAMES.filter(g => appState.favorites.includes(g.id));
+      const favGrid = document.getElementById('favoritesGrid');
+      const emptyFav = document.getElementById('emptyFavoritesState');
+      if (favGames.length === 0) {
+        favGrid.innerHTML = '';
+        emptyFav.classList.remove('hidden');
+      } else {
+        emptyFav.classList.add('hidden');
+        favGrid.innerHTML = favGames.map(createGameCardHTML).join('');
+      }
+    }
+
+    document.getElementById('heroPlayRandomBtn').addEventListener('click', () => {
+      const randomGame = GAMES[Math.floor(Math.random() * GAMES.length)];
+      openGameModal(randomGame.id);
+    });
+
+    document.getElementById('resetDataBtn').addEventListener('click', () => {
+      appState.scores = {};
+      appState.favorites = [];
+      localStorage.removeItem(STORAGE_KEYS.SCORES);
+      localStorage.removeItem(STORAGE_KEYS.FAVORITES);
+      updateStatsUI();
+      renderAllViews();
+      const toast = document.getElementById('resetConfirmToast');
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    });
+
+    /*************************************************************************
+     * 4. GAME MODAL MANAGER
+     *************************************************************************/
+    const gameModal = document.getElementById('gameModal');
+    const gameStage = document.getElementById('gameStage');
+
+    function updateModalFavIcon() {
+      if (!appState.activeGameId) return;
+      const isFav = appState.favorites.includes(appState.activeGameId);
+      const icon = document.getElementById('modalFavIcon');
+      if (isFav) {
+        icon.classList.add('text-rose-500', 'fill-rose-500');
+        icon.classList.remove('text-slate-400');
+      } else {
+        icon.classList.remove('text-rose-500', 'fill-rose-500');
+        icon.classList.add('text-slate-400');
+      }
+    }
+
+    function openGameModal(gameId) {
+      const game = GAMES.find(g => g.id === gameId);
+      if (!game) return;
+
+      // Clean up any previous game loop/listeners
+      if (typeof appState.cleanupFn === 'function') {
+        appState.cleanupFn();
+        appState.cleanupFn = null;
+      }
+
+      appState.activeGameId = gameId;
+      appState.currentScore = 0;
+
+      document.getElementById('modalGameTitle').textContent = game.title;
+      document.getElementById('modalGameCategory').textContent = game.category;
+      document.getElementById('modalGameHint').textContent = game.hint;
+      document.getElementById('modalScore').textContent = '0';
+      document.getElementById('modalBestScore').textContent = getBestScore(gameId);
+      updateModalFavIcon();
+
+      gameModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+
+      launchGame(gameId);
+    }
+
+    function closeGameModal() {
+      if (typeof appState.cleanupFn === 'function') {
+        appState.cleanupFn();
+        appState.cleanupFn = null;
+      }
+      appState.activeGameId = null;
+      gameModal.classList.add('hidden');
+      gameStage.innerHTML = '';
+      document.body.style.overflow = '';
+      renderAllViews();
+    }
+
+    document.getElementById('closeModalBtn').addEventListener('click', closeGameModal);
+    document.getElementById('modalFavBtn').addEventListener('click', () => {
+      if (appState.activeGameId) toggleFavorite(appState.activeGameId);
+    });
+    document.getElementById('restartGameBtn').addEventListener('click', () => {
+      if (appState.activeGameId) openGameModal(appState.activeGameId);
+    });
+
+    function launchGame(gameId) {
+      gameStage.innerHTML = '';
+      const launchers = {
+        'block-blast': initBlockBlast,
+        'tetris': initTetris,
+        '2048': init2048,
+        'snake': initSnake,
+        'minesweeper': initMinesweeper,
+        'memory-game': initMemoryGame,
+        'sudoku': initSudoku,
+        'color-match': initColorMatch,
+        'flappy-bird': initFlappyBird,
+        'puzzle-game': initPuzzleGame
+      };
+      if (launchers[gameId]) {
+        appState.cleanupFn = launchers[gameId](gameStage);
+      }
+    }
+
+    /*************************************************************************
+     * GAME 1: BLOCK BLAST (8x8 Polyomino Placement & Row/Col Clear)
+     *************************************************************************/
+    function initBlockBlast(container) {
+      const GRID_SIZE = 8;
+      const COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6'];
+      const SHAPES = [
+        [[0,0]],
+        [[0,0],[0,1]],
+        [[0,0],[1,0]],
+        [[0,0],[0,1],[0,2]],
+        [[0,0],[1,0],[2,0]],
+        [[0,0],[0,1],[1,0],[1,1]], // 2x2
+        [[0,0],[1,0],[2,0],[2,1]], // L
+        [[0,1],[1,1],[2,1],[2,0]], // J
+        [[0,0],[0,1],[0,2],[1,1]], // T
+        [[0,0],[0,1],[1,1],[1,2]], // Z
+        [[0,0],[0,1],[0,2],[0,3]], // 4-line H
+        [[0,0],[1,0],[2,0],[3,0]], // 4-line V
+        [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]] // 3x3
+      ];
+
+      let board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+      let tray = [];
+      let selectedIdx = 0;
+      let hoverCell = null;
+      let score = 0;
+      let gameOver = false;
+
+      function randomPiece() {
+        const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+        const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        return { shape, color, used: false };
+      }
+
+      function refillTray() {
+        tray = [randomPiece(), randomPiece(), randomPiece()];
+        selectedIdx = 0;
+      }
+
+      function canPlace(piece, r0, c0) {
+        if (!piece || piece.used) return false;
+        return piece.shape.every(([dr, dc]) => {
+          const r = r0 + dr, c = c0 + dc;
+          return r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE && board[r][c] === null;
+        });
+      }
+
+      function anyMoveAvailable() {
+        return tray.some(piece => {
+          if (piece.used) return false;
+          for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+              if (canPlace(piece, r, c)) return true;
+            }
+          }
+          return false;
+        });
+      }
+
+      function placePiece(r0, c0) {
+        const piece = tray[selectedIdx];
+        if (!canPlace(piece, r0, c0) || gameOver) return;
+
+        piece.shape.forEach(([dr, dc]) => {
+          board[r0 + dr][c0 + dc] = piece.color;
+        });
+        piece.used = true;
+        score += piece.shape.length * 10;
+
+        // Check full rows & columns
+        const fullRows = [];
+        const fullCols = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+          if (board[r].every(cell => cell !== null)) fullRows.push(r);
+        }
+        for (let c = 0; c < GRID_SIZE; c++) {
+          let full = true;
+          for (let r = 0; r < GRID_SIZE; r++) {
+            if (board[r][c] === null) full = false;
+          }
+          if (full) fullCols.push(c);
+        }
+
+        const clearedLines = fullRows.length + fullCols.length;
+        if (clearedLines > 0) {
+          fullRows.forEach(r => board[r].fill(null));
+          fullCols.forEach(c => {
+            for (let r = 0; r < GRID_SIZE; r++) board[r][c] = null;
+          });
+          score += clearedLines * clearedLines * 100;
+        }
+
+        updateGameScore(score);
+
+        // Select next unused piece or refill tray
+        if (tray.every(p => p.used)) {
+          refillTray();
+        } else {
+          selectedIdx = tray.findIndex(p => !p.used);
+        }
+
+        if (!anyMoveAvailable()) {
+          gameOver = true;
+        }
+        render();
+      }
+
+      refillTray();
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-5 w-full max-w-md select-none">
+          <div id="bbGrid" class="grid grid-cols-8 gap-1 p-2.5 rounded-2xl bg-slate-200 dark:bg-slate-800 shadow-inner w-full aspect-square max-w-[340px]"></div>
+          <div id="bbStatus" class="text-xs font-bold text-slate-500 dark:text-slate-400">Select a block below, then tap the grid to place it</div>
+          <div id="bbTray" class="grid grid-cols-3 gap-3 w-full max-w-[340px]"></div>
+        </div>
+      `;
+
+      const gridEl = container.querySelector('#bbGrid');
+      const trayEl = container.querySelector('#bbTray');
+      const statusEl = container.querySelector('#bbStatus');
+
+      function render() {
+        gridEl.innerHTML = '';
+        const activePiece = tray[selectedIdx];
+        const previewSet = new Set();
+        let validPreview = false;
+
+        if (hoverCell && activePiece && !activePiece.used) {
+          validPreview = canPlace(activePiece, hoverCell[0], hoverCell[1]);
+          activePiece.shape.forEach(([dr, dc]) => {
+            previewSet.add(`${hoverCell[0] + dr},${hoverCell[1] + dc}`);
+          });
+        }
+
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
+            const cell = document.createElement('div');
+            const color = board[r][c];
+            const isPreview = previewSet.has(`${r},${c}`);
+            cell.className = 'rounded-md transition-all cursor-pointer flex items-center justify-center';
+            if (color) {
+              cell.style.backgroundColor = color;
+              cell.classList.add('shadow-sm');
+            } else if (isPreview) {
+              cell.style.backgroundColor = validPreview ? activePiece.color : '#ef4444';
+              cell.style.opacity = '0.45';
+            } else {
+              cell.classList.add('bg-white/85', 'dark:bg-slate-900/90');
+            }
+
+            cell.addEventListener('mouseenter', () => {
+              hoverCell = [r, c];
+              render();
+            });
+            cell.addEventListener('click', () => {
+              hoverCell = [r, c];
+              placePiece(r, c);
+            });
+            gridEl.appendChild(cell);
+          }
+        }
+
+        // Render tray pieces
+        trayEl.innerHTML = '';
+        tray.forEach((piece, idx) => {
+          const btn = document.createElement('button');
+          const isSelected = idx === selectedIdx && !piece.used;
+          btn.className = `p-3 rounded-2xl border-2 flex items-center justify-center h-24 transition-all ${
+            piece.used
+              ? 'opacity-25 border-transparent bg-slate-200/50 dark:bg-slate-800/40 cursor-default'
+              : isSelected
+                ? 'border-indigo-500 bg-indigo-500/10 scale-105 shadow-md'
+                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-300'
+          }`;
+
+          if (!piece.used) {
+            const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+            const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+            const mini = document.createElement('div');
+            mini.style.display = 'grid';
+            mini.style.gridTemplateColumns = `repeat(${maxC}, 14px)`;
+            mini.style.gridTemplateRows = `repeat(${maxR}, 14px)`;
+            mini.style.gap = '2px';
+
+            const set = new Set(piece.shape.map(([r, c]) => `${r},${c}`));
+            for (let r = 0; r < maxR; r++) {
+              for (let c = 0; c < maxC; c++) {
+                const sq = document.createElement('div');
+                sq.className = 'rounded-[3px]';
+                if (set.has(`${r},${c}`)) sq.style.backgroundColor = piece.color;
+                mini.appendChild(sq);
+              }
+            }
+            btn.appendChild(mini);
+            btn.addEventListener('click', () => {
+              selectedIdx = idx;
+              render();
+            });
+          }
+          trayEl.appendChild(btn);
+        });
+
+        if (gameOver) {
+          statusEl.innerHTML = `<span class="text-rose-500 text-sm">No more moves! Final Score: ${score} — Click Restart</span>`;
+        }
+      }
+
+      gridEl.addEventListener('mouseleave', () => {
+        hoverCell = null;
+        render();
+      });
+
+      render();
+      return () => {};
+    }
+
+    /*************************************************************************
+     * GAME 2: TETRIS (10x20 Classic Canvas with Ghost Piece & Touch Controls)
+     *************************************************************************/
+    function initTetris(container) {
+      const COLS = 10, ROWS = 20, BLOCK = 22;
+      const COLORS = [null, '#06b6d4', '#3b82f6', '#f97316', '#eab308', '#22c55e', '#a855f7', '#ef4444'];
+      const SHAPES = [
+        [],
+        [[1,1,1,1]], // I
+        [[2,0,0],[2,2,2]], // J
+        [[0,0,3],[3,3,3]], // L
+        [[4,4],[4,4]], // O
+        [[0,5,5],[5,5,0]], // S
+        [[0,6,0],[6,6,6]], // T
+        [[7,7,0],[0,7,7]]  // Z
+      ];
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-4">
+          <div class="flex items-start gap-4">
+            <div class="relative rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-slate-700 shadow-lg bg-slate-900">
+              <canvas id="tetrisCanvas" width="${COLS * BLOCK}" height="${ROWS * BLOCK}"></canvas>
+              <div id="tetrisOver" class="hidden absolute inset-0 bg-slate-950/85 flex flex-col items-center justify-center text-white p-4 text-center">
+                <div class="text-xl font-extrabold text-rose-400">Game Over</div>
+                <div id="tetrisFinalText" class="text-xs text-slate-300 mt-1 mb-3"></div>
+                <button id="tetrisRetry" class="px-4 py-2 rounded-xl bg-indigo-600 text-xs font-bold">Play Again</button>
+              </div>
+            </div>
+            <div class="flex flex-col gap-3">
+              <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Next</div>
+                <canvas id="tetrisNextCanvas" width="80" height="80"></canvas>
+              </div>
+              <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <div class="text-[10px] font-bold uppercase text-slate-400">Lines</div>
+                <div id="tetrisLines" class="text-base font-extrabold">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Touch / On-screen Controls -->
+          <div class="grid grid-cols-4 gap-2 w-full max-w-xs">
+            <button id="tLeft" class="py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-extrabold active:scale-95">◀</button>
+            <button id="tRotate" class="py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-extrabold active:scale-95">↻</button>
+            <button id="tDown" class="py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-extrabold active:scale-95">▼</button>
+            <button id="tRight" class="py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-extrabold active:scale-95">▶</button>
+          </div>
+        </div>
+      `;
+
+      const canvas = container.querySelector('#tetrisCanvas');
+      const ctx = canvas.getContext('2d');
+      const nextCanvas = container.querySelector('#tetrisNextCanvas');
+      const nextCtx = nextCanvas.getContext('2d');
+
+      let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      let score = 0, lines = 0, dropCounter = 0, lastTime = 0, isOver = false, animId = null;
+
+      function createPiece() {
+        const type = Math.floor(Math.random() * 7) + 1;
+        const matrix = SHAPES[type].map(r => [...r]);
+        return { matrix, x: Math.floor(COLS / 2) - Math.ceil(matrix[0].length / 2), y: 0 };
+      }
+
+      let player = createPiece();
+      let nextPiece = createPiece();
+
+      function collide(b, p) {
+        for (let y = 0; y < p.matrix.length; y++) {
+          for (let x = 0; x < p.matrix[y].length; x++) {
+            if (p.matrix[y][x] !== 0) {
+              const ny = y + p.y, nx = x + p.x;
+              if (ny >= ROWS || nx < 0 || nx >= COLS || (ny >= 0 && b[ny][nx] !== 0)) return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function merge() {
+        player.matrix.forEach((row, y) => {
+          row.forEach((val, x) => {
+            if (val !== 0 && y + player.y >= 0) board[y + player.y][x + player.x] = val;
+          });
+        });
+      }
+
+      function sweep() {
+        let cleared = 0;
+        outer: for (let y = ROWS - 1; y >= 0; y--) {
+          for (let x = 0; x < COLS; x++) {
+            if (board[y][x] === 0) continue outer;
+          }
+          const row = board.splice(y, 1)[0].fill(0);
+          board.unshift(row);
+          y++;
+          cleared++;
+        }
+        if (cleared > 0) {
+          lines += cleared;
+          score += [0, 100, 300, 500, 800][cleared] || cleared * 200;
+          container.querySelector('#tetrisLines').textContent = lines;
+          updateGameScore(score);
+        }
+      }
+
+      function rotateMatrix(matrix) {
+        return matrix[0].map((_, i) => matrix.map(row => row[i]).reverse());
+      }
+
+      function playerRotate() {
+        if (isOver) return;
+        const old = player.matrix;
+        player.matrix = rotateMatrix(player.matrix);
+        if (collide(board, player)) {
+          player.x += 1;
+          if (collide(board, player)) {
+            player.x -= 2;
+            if (collide(board, player)) {
+              player.x += 1;
+              player.matrix = old;
+            }
+          }
+        }
+      }
+
+      function playerDrop() {
+        if (isOver) return;
+        player.y++;
+        if (collide(board, player)) {
+          player.y--;
+          merge();
+          sweep();
+          player = nextPiece;
+          nextPiece = createPiece();
+          drawNext();
+          if (collide(board, player)) {
+            isOver = true;
+            container.querySelector('#tetrisFinalText').textContent = `Score: ${score} | Lines: ${lines}`;
+            container.querySelector('#tetrisOver').classList.remove('hidden');
+          }
+        }
+        dropCounter = 0;
+      }
+
+      function moveX(dir) {
+        if (isOver) return;
+        player.x += dir;
+        if (collide(board, player)) player.x -= dir;
+      }
+
+      function drawCell(context, x, y, val, size, alpha = 1) {
+        context.globalAlpha = alpha;
+        context.fillStyle = COLORS[val];
+        context.beginPath();
+        context.roundRect(x * size + 1, y * size + 1, size - 2, size - 2, 4);
+        context.fill();
+        context.globalAlpha = 1;
+      }
+
+      function drawNext() {
+        nextCtx.clearRect(0, 0, 80, 80);
+        const m = nextPiece.matrix;
+        const size = 16;
+        const ox = (80 - m[0].length * size) / 2 / size;
+        const oy = (80 - m.length * size) / 2 / size;
+        m.forEach((row, y) => row.forEach((val, x) => {
+          if (val) drawCell(nextCtx, x + ox, y + oy, val, size);
+        }));
+      }
+
+      function draw() {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Subtle grid
+        ctx.strokeStyle = 'rgba(148,163,184,0.08)';
+        for (let x = 0; x < COLS; x++) {
+          ctx.beginPath(); ctx.moveTo(x * BLOCK, 0); ctx.lineTo(x * BLOCK, canvas.height); ctx.stroke();
+        }
+        for (let y = 0; y < ROWS; y++) {
+          ctx.beginPath(); ctx.moveTo(0, y * BLOCK); ctx.lineTo(canvas.width, y * BLOCK); ctx.stroke();
+        }
+
+        // Board
+        board.forEach((row, y) => row.forEach((val, x) => {
+          if (val) drawCell(ctx, x, y, val, BLOCK);
+        }));
+
+        // Ghost piece
+        const ghost = { matrix: player.matrix, x: player.x, y: player.y };
+        while (!collide(board, ghost)) ghost.y++;
+        ghost.y--;
+        ghost.matrix.forEach((row, y) => row.forEach((val, x) => {
+          if (val) drawCell(ctx, x + ghost.x, y + ghost.y, val, BLOCK, 0.22);
+        }));
+
+        // Active piece
+        player.matrix.forEach((row, y) => row.forEach((val, x) => {
+          if (val) drawCell(ctx, x + player.x, y + player.y, val, BLOCK);
+        }));
+      }
+
+      function update(time = 0) {
+        if (isOver) return;
+        const delta = time - lastTime;
+        lastTime = time;
+        dropCounter += delta;
+        const interval = Math.max(150, 750 - Math.floor(lines / 5) * 65);
+        if (dropCounter > interval) playerDrop();
+        draw();
+        animId = requestAnimationFrame(update);
+      }
+
+      function onKey(e) {
+        if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' '].includes(e.key)) e.preventDefault();
+        if (e.key === 'ArrowLeft' || e.key === 'a') moveX(-1);
+        else if (e.key === 'ArrowRight' || e.key === 'd') moveX(1);
+        else if (e.key === 'ArrowDown' || e.key === 's') playerDrop();
+        else if (e.key === 'ArrowUp' || e.key === 'w') playerRotate();
+        else if (e.key === ' ') {
+          while (!collide(board, player)) player.y++;
+          player.y--;
+          playerDrop();
+        }
+      }
+
+      window.addEventListener('keydown', onKey);
+      container.querySelector('#tLeft').addEventListener('click', () => moveX(-1));
+      container.querySelector('#tRight').addEventListener('click', () => moveX(1));
+      container.querySelector('#tDown').addEventListener('click', () => playerDrop());
+      container.querySelector('#tRotate').addEventListener('click', () => playerRotate());
+      container.querySelector('#tetrisRetry').addEventListener('click', () => openGameModal('tetris'));
+
+      drawNext();
+      animId = requestAnimationFrame(update);
+
+      return () => {
+        cancelAnimationFrame(animId);
+        window.removeEventListener('keydown', onKey);
+      };
+    }
+
+    /*************************************************************************
+     * GAME 3: 2048 (4x4 Sliding Number Merge with Keyboard, Swipe & Buttons)
+     *************************************************************************/
+    function init2048(container) {
+      let grid = Array.from({ length: 4 }, () => Array(4).fill(0));
+      let score = 0;
+
+      const TILE_STYLES = {
+        0: 'bg-slate-200/70 dark:bg-slate-800/80 text-transparent',
+        2: 'bg-amber-50 dark:bg-slate-700 text-slate-800 dark:text-white',
+        4: 'bg-amber-100 dark:bg-amber-900/60 text-slate-800 dark:text-amber-100',
+        8: 'bg-orange-400 text-white',
+        16: 'bg-orange-500 text-white',
+        32: 'bg-rose-500 text-white',
+        64: 'bg-red-600 text-white',
+        128: 'bg-yellow-400 text-slate-900',
+        256: 'bg-yellow-500 text-white',
+        512: 'bg-emerald-500 text-white',
+        1024: 'bg-indigo-500 text-white',
+        2048: 'bg-purple-600 text-white ring-2 ring-amber-300'
+      };
+
+      function spawnTile() {
+        const empty = [];
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            if (grid[r][c] === 0) empty.push([r, c]);
+          }
+        }
+        if (empty.length) {
+          const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+          grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+        }
+      }
+
+      function slideRow(row) {
+        let arr = row.filter(v => v !== 0);
+        for (let i = 0; i < arr.length - 1; i++) {
+          if (arr[i] === arr[i + 1]) {
+            arr[i] *= 2;
+            score += arr[i];
+            arr[i + 1] = 0;
+          }
+        }
+        arr = arr.filter(v => v !== 0);
+        while (arr.length < 4) arr.push(0);
+        return arr;
+      }
+
+      function move(dir) {
+        const prev = JSON.stringify(grid);
+        if (dir === 'left') {
+          grid = grid.map(r => slideRow(r));
+        } else if (dir === 'right') {
+          grid = grid.map(r => slideRow([...r].reverse()).reverse());
+        } else if (dir === 'up') {
+          for (let c = 0; c < 4; c++) {
+            const col = slideRow([grid[0][c], grid[1][c], grid[2][c], grid[3][c]]);
+            for (let r = 0; r < 4; r++) grid[r][c] = col[r];
+          }
+        } else if (dir === 'down') {
+          for (let c = 0; c < 4; c++) {
+            const col = slideRow([grid[3][c], grid[2][c], grid[1][c], grid[0][c]]).reverse();
+            for (let r = 0; r < 4; r++) grid[r][c] = col[r];
+          }
+        }
+
+        if (JSON.stringify(grid) !== prev) {
+          spawnTile();
+          updateGameScore(score);
+          render();
+          if (isGameOver()) {
+            container.querySelector('#g2048Status').innerHTML = `<span class="text-rose-500 font-bold">No moves left! Final Score: ${score}</span>`;
+          }
+        }
+      }
+
+      function isGameOver() {
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            if (grid[r][c] === 0) return false;
+            if (c < 3 && grid[r][c] === grid[r][c + 1]) return false;
+            if (r < 3 && grid[r][c] === grid[r + 1][c]) return false;
+          }
+        }
+        return true;
+      }
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-4 w-full max-w-sm">
+          <div id="g2048Board" class="no-touch-scroll grid grid-cols-4 gap-2.5 p-3 rounded-2xl bg-slate-300 dark:bg-slate-900 w-full aspect-square max-w-[330px] shadow-inner"></div>
+          <div id="g2048Status" class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Swipe on board or use buttons / arrow keys</div>
+          <div class="grid grid-cols-3 gap-2 w-44">
+            <div></div>
+            <button data-dir="up" class="d2048 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">▲</button>
+            <div></div>
+            <button data-dir="left" class="d2048 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">◀</button>
+            <button data-dir="down" class="d2048 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">▼</button>
+            <button data-dir="right" class="d2048 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">▶</button>
+          </div>
+        </div>
+      `;
+
+      const boardEl = container.querySelector('#g2048Board');
+
+      function render() {
+        boardEl.innerHTML = '';
+        grid.forEach(row => {
+          row.forEach(val => {
+            const tile = document.createElement('div');
+            const style = TILE_STYLES[val] || 'bg-purple-700 text-white';
+            tile.className = `rounded-xl flex items-center justify-center font-extrabold text-xl sm:text-2xl shadow-sm transition-all ${style} ${val ? 'animate-pop' : ''}`;
+            tile.textContent = val || '';
+            boardEl.appendChild(tile);
+          });
+        });
+      }
+
+      function onKey(e) {
+        const map = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down' };
+        if (map[e.key]) {
+          e.preventDefault();
+          move(map[e.key]);
+        }
+      }
+
+      let sx = 0, sy = 0;
+      boardEl.addEventListener('touchstart', e => {
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+      }, { passive: true });
+      boardEl.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > 25) {
+          if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+          else move(dy > 0 ? 'down' : 'up');
+        }
+      });
+
+      container.querySelectorAll('.d2048').forEach(btn => {
+        btn.addEventListener('click', () => move(btn.dataset.dir));
+      });
+      window.addEventListener('keydown', onKey);
+
+      spawnTile();
+      spawnTile();
+      render();
+
+      return () => window.removeEventListener('keydown', onKey);
+    }
+
+    /*************************************************************************
+     * GAME 4: SNAKE (Smooth Grid Canvas + D-Pad Controls)
+     *************************************************************************/
+    function initSnake(container) {
+      const GRID = 20, SIZE = 16;
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-4">
+          <div class="relative rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-slate-700 shadow-lg">
+            <canvas id="snakeCanvas" width="${GRID * SIZE}" height="${GRID * SIZE}"></canvas>
+            <div id="snakeOver" class="hidden absolute inset-0 bg-slate-950/85 flex flex-col items-center justify-center text-white p-4 text-center">
+              <div class="text-xl font-extrabold text-rose-400">Crashed!</div>
+              <div id="snakeFinal" class="text-xs text-slate-300 mt-1 mb-3"></div>
+              <button id="snakeRetry" class="px-4 py-2 rounded-xl bg-emerald-600 text-xs font-bold">Play Again</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2 w-44">
+            <div></div>
+            <button data-dir="0,-1" class="sdir py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">▲</button>
+            <div></div>
+            <button data-dir="-1,0" class="sdir py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">◀</button>
+            <button data-dir="0,1" class="sdir py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">▼</button>
+            <button data-dir="1,0" class="sdir py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">▶</button>
+          </div>
+        </div>
+      `;
+
+      const canvas = container.querySelector('#snakeCanvas');
+      const ctx = canvas.getContext('2d');
+
+      let snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+      let dir = { x: 1, y: 0 };
+      let nextDir = { x: 1, y: 0 };
+      let food = { x: 15, y: 10 };
+      let score = 0;
+      let over = false;
+
+      function placeFood() {
+        while (true) {
+          const fx = Math.floor(Math.random() * GRID);
+          const fy = Math.floor(Math.random() * GRID);
+          if (!snake.some(s => s.x === fx && s.y === fy)) {
+            food = { x: fx, y: fy };
+            break;
+          }
+        }
+      }
+
+      function setDir(nx, ny) {
+        if (nx !== -dir.x || ny !== -dir.y) {
+          nextDir = { x: nx, y: ny };
+        }
+      }
+
+      function tick() {
+        if (over) return;
+        dir = nextDir;
+        const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+        if (head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID || snake.some(s => s.x === head.x && s.y === head.y)) {
+          over = true;
+          container.querySelector('#snakeFinal').textContent = `Score: ${score}`;
+          container.querySelector('#snakeOver').classList.remove('hidden');
+          return;
+        }
+
+        snake.unshift(head);
+        if (head.x === food.x && head.y === food.y) {
+          score += 10;
+          updateGameScore(score);
+          placeFood();
+        } else {
+          snake.pop();
+        }
+        draw();
+      }
+
+      function draw() {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Food
+        ctx.fillStyle = '#fb7185';
+        ctx.beginPath();
+        ctx.arc(food.x * SIZE + SIZE / 2, food.y * SIZE + SIZE / 2, SIZE * 0.38, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Snake
+        snake.forEach((seg, i) => {
+          ctx.fillStyle = i === 0 ? '#34d399' : '#10b981';
+          ctx.beginPath();
+          ctx.roundRect(seg.x * SIZE + 1, seg.y * SIZE + 1, SIZE - 2, SIZE - 2, 5);
+          ctx.fill();
+        });
+      }
+
+      function onKey(e) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
+        if (e.key === 'ArrowUp' || e.key === 'w') setDir(0, -1);
+        else if (e.key === 'ArrowDown' || e.key === 's') setDir(0, 1);
+        else if (e.key === 'ArrowLeft' || e.key === 'a') setDir(-1, 0);
+        else if (e.key === 'ArrowRight' || e.key === 'd') setDir(1, 0);
+      }
+
+      window.addEventListener('keydown', onKey);
+      container.querySelectorAll('.sdir').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const [x, y] = btn.dataset.dir.split(',').map(Number);
+          setDir(x, y);
+        });
+      });
+      container.querySelector('#snakeRetry').addEventListener('click', () => openGameModal('snake'));
+
+      draw();
+      const timer = setInterval(tick, 125);
+      return () => {
+        clearInterval(timer);
+        window.removeEventListener('keydown', onKey);
+      };
+    }
+
+    /*************************************************************************
+     * GAME 5: MINESWEEPER (9x9 Grid, 10 Mines, Flood-Fill, Flag Mode Toggle)
+     *************************************************************************/
+    function initMinesweeper(container) {
+      const SIZE = 9, MINES = 10;
+      let board = [];
+      let revealedCount = 0;
+      let flagMode = false;
+      let gameOver = false;
+      let firstClick = true;
+      let seconds = 0;
+
+      for (let r = 0; r < SIZE; r++) {
+        board[r] = [];
+        for (let c = 0; c < SIZE; c++) {
+          board[r][c] = { mine: false, revealed: false, flagged: false, count: 0 };
+        }
+      }
+
+      function placeMines(safeR, safeC) {
+        let placed = 0;
+        while (placed < MINES) {
+          const r = Math.floor(Math.random() * SIZE);
+          const c = Math.floor(Math.random() * SIZE);
+          if (!board[r][c].mine && (Math.abs(r - safeR) > 1 || Math.abs(c - safeC) > 1)) {
+            board[r][c].mine = true;
+            placed++;
+          }
+        }
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            if (board[r][c].mine) continue;
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+              for (let dc = -1; dc <= 1; dc++) {
+                const nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc].mine) count++;
+              }
+            }
+            board[r][c].count = count;
+          }
+        }
+      }
+
+      function reveal(r, c) {
+        const cell = board[r][c];
+        if (cell.revealed || cell.flagged || gameOver) return;
+        if (firstClick) {
+          placeMines(r, c);
+          firstClick = false;
+        }
+        cell.revealed = true;
+        revealedCount++;
+
+        if (cell.mine) {
+          gameOver = true;
+          board.forEach(row => row.forEach(cl => { if (cl.mine) cl.revealed = true; }));
+          container.querySelector('#msStatus').innerHTML = `<span class="text-rose-500 font-bold">💥 Boom! You hit a mine.</span>`;
+          render();
+          return;
+        }
+
+        if (cell.count === 0) {
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE) reveal(nr, nc);
+            }
+          }
+        }
+
+        const currentScore = revealedCount * 10;
+        updateGameScore(currentScore);
+
+        if (revealedCount === SIZE * SIZE - MINES) {
+          gameOver = true;
+          const bonus = Math.max(100, 1000 - seconds * 5);
+          updateGameScore(currentScore + bonus);
+          container.querySelector('#msStatus').innerHTML = `<span class="text-emerald-500 font-bold">🎉 Cleared! Score: ${currentScore + bonus}</span>`;
+        }
+      }
+
+      function toggleFlag(r, c) {
+        const cell = board[r][c];
+        if (cell.revealed || gameOver) return;
+        cell.flagged = !cell.flagged;
+        render();
+      }
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-4 w-full max-w-sm">
+          <div class="flex items-center justify-between w-full px-2">
+            <button id="msFlagToggle" class="px-3.5 py-2 rounded-xl text-xs font-bold border transition-all bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+              🚩 Flag Mode: OFF
+            </button>
+            <div class="text-xs font-bold text-slate-500 dark:text-slate-400">
+              Mines: ${MINES} • Time: <span id="msTimer">0</span>s
+            </div>
+          </div>
+          <div id="msGrid" class="grid grid-cols-9 gap-1 p-2.5 rounded-2xl bg-slate-200 dark:bg-slate-800 w-full aspect-square max-w-[340px]"></div>
+          <div id="msStatus" class="text-xs font-semibold text-slate-500 dark:text-slate-400">Tap cell to reveal • Right-click or Flag Mode to mark</div>
+        </div>
+      `;
+
+      const gridEl = container.querySelector('#msGrid');
+      const flagBtn = container.querySelector('#msFlagToggle');
+      const NUM_COLORS = ['', 'text-blue-600', 'text-emerald-600', 'text-rose-600', 'text-purple-600', 'text-amber-700', 'text-cyan-600'];
+
+      flagBtn.addEventListener('click', () => {
+        flagMode = !flagMode;
+        flagBtn.textContent = `🚩 Flag Mode: ${flagMode ? 'ON' : 'OFF'}`;
+        flagBtn.classList.toggle('bg-amber-500', flagMode);
+        flagBtn.classList.toggle('text-white', flagMode);
+      });
+
+      function render() {
+        gridEl.innerHTML = '';
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            const cell = board[r][c];
+            const el = document.createElement('button');
+            el.className = 'rounded-md font-extrabold text-xs sm:text-sm flex items-center justify-center transition-all select-none';
+            if (cell.revealed) {
+              if (cell.mine) {
+                el.classList.add('bg-rose-500', 'text-white');
+                el.textContent = '💣';
+              } else {
+                el.classList.add('bg-white', 'dark:bg-slate-900', NUM_COLORS[cell.count] || '');
+                el.textContent = cell.count || '';
+              }
+            } else {
+              el.classList.add('bg-slate-300', 'dark:bg-slate-700', 'hover:bg-slate-400/70');
+              el.textContent = cell.flagged ? '🚩' : '';
+            }
+
+            el.addEventListener('click', () => {
+              if (flagMode) toggleFlag(r, c);
+              else { reveal(r, c); render(); }
+            });
+            el.addEventListener('contextmenu', e => {
+              e.preventDefault();
+              toggleFlag(r, c);
+            });
+            gridEl.appendChild(el);
+          }
+        }
+      }
+
+      const timer = setInterval(() => {
+        if (!gameOver && !firstClick) {
+          seconds++;
+          container.querySelector('#msTimer').textContent = seconds;
+        }
+      }, 1000);
+
+      render();
+      return () => clearInterval(timer);
+    }
+
+    /*************************************************************************
+     * GAME 6: MEMORY GAME (4x4 3D Flip Card Matching)
+     *************************************************************************/
+    function initMemoryGame(container) {
+      const ICONS = ['🚀', '💎', '⚡', '🎯', '🔥', '🌈', '🍀', '👑'];
+      let deck = [...ICONS, ...ICONS]
+        .sort(() => Math.random() - 0.5)
+        .map((icon, idx) => ({ id: idx, icon, flipped: false, matched: false }));
+
+      let flippedCards = [];
+      let moves = 0;
+      let matchedPairs = 0;
+      let locked = false;
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-4 w-full max-w-sm">
+          <div class="flex items-center justify-between w-full px-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Pairs: <strong id="memPairs" class="text-indigo-500">0 / 8</strong></span>
+            <span>Moves: <strong id="memMoves">0</strong></span>
+          </div>
+          <div id="memGrid" class="grid grid-cols-4 gap-2.5 w-full aspect-square max-w-[330px]"></div>
+          <div id="memStatus" class="text-xs font-semibold text-slate-500 dark:text-slate-400">Match all 8 pairs with minimum moves!</div>
+        </div>
+      `;
+
+      const gridEl = container.querySelector('#memGrid');
+
+      function render() {
+        gridEl.innerHTML = '';
+        deck.forEach((card, index) => {
+          const wrap = document.createElement('div');
+          wrap.className = `memory-card cursor-pointer ${card.flipped ? 'flipped' : ''} ${card.matched ? 'matched' : ''}`;
+          wrap.innerHTML = `
+            <div class="memory-inner">
+              <div class="memory-front bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-extrabold text-xl shadow-md">
+                ?
+              </div>
+              <div class="memory-back bg-white dark:bg-slate-800 border-2 ${card.matched ? 'border-emerald-400' : 'border-indigo-400'} text-3xl shadow-md">
+                ${card.icon}
+              </div>
+            </div>
+          `;
+          wrap.addEventListener('click', () => handleFlip(index));
+          gridEl.appendChild(wrap);
+        });
+      }
+
+      function handleFlip(idx) {
+        const card = deck[idx];
+        if (locked || card.flipped || card.matched) return;
+
+        card.flipped = true;
+        flippedCards.push(card);
+        render();
+
+        if (flippedCards.length === 2) {
+          moves++;
+          container.querySelector('#memMoves').textContent = moves;
+          locked = true;
+          const [a, b] = flippedCards;
+
+          if (a.icon === b.icon) {
+            a.matched = true;
+            b.matched = true;
+            matchedPairs++;
+            container.querySelector('#memPairs').textContent = `${matchedPairs} / 8`;
+            flippedCards = [];
+            locked = false;
+
+            const score = Math.max(100, matchedPairs * 150 - Math.max(0, moves - matchedPairs) * 15);
+            updateGameScore(score);
+
+            if (matchedPairs === 8) {
+              container.querySelector('#memStatus').innerHTML = `<span class="text-emerald-500 font-bold">🎉 Completed in ${moves} moves! Score: ${score}</span>`;
+            }
+            render();
+          } else {
+            setTimeout(() => {
+              a.flipped = false;
+              b.flipped = false;
+              flippedCards = [];
+              locked = false;
+              render();
+            }, 650);
+          }
+        }
+      }
+
+      render();
+      return () => {};
+    }
+
+    /*************************************************************************
+     * GAME 7: SUDOKU (Valid 9x9 Generator, Cell Selection, Mistake Highlight)
+     *************************************************************************/
+    function initSudoku(container) {
+      // Base valid Sudoku transformed via row/col/digit shuffling
+      const BASE = [
+        [5,3,4,6,7,8,9,1,2],
+        [6,7,2,1,9,5,3,4,8],
+        [1,9,8,3,4,2,5,6,7],
+        [8,5,9,7,6,1,4,2,3],
+        [4,2,6,8,5,3,7,9,1],
+        [7,1,3,9,2,4,8,5,6],
+        [9,6,1,5,3,7,2,8,4],
+        [2,8,7,4,1,9,6,3,5],
+        [3,4,5,2,8,6,1,7,9]
+      ];
+
+      // Shuffle digit mapping 1..9
+      const digits = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+      const solution = BASE.map(row => row.map(v => digits[v - 1]));
+
+      // Create puzzle by removing ~38 cells
+      const puzzle = solution.map(row => [...row]);
+      const fixed = Array.from({ length: 9 }, () => Array(9).fill(true));
+      let removed = 0;
+      while (removed < 38) {
+        const r = Math.floor(Math.random() * 9);
+        const c = Math.floor(Math.random() * 9);
+        if (puzzle[r][c] !== 0) {
+          puzzle[r][c] = 0;
+          fixed[r][c] = false;
+          removed++;
+        }
+      }
+
+      let selected = [0, 0];
+      let mistakes = 0;
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-3.5 w-full max-w-sm">
+          <div class="flex items-center justify-between w-full px-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Mistakes: <strong id="sudMistakes" class="text-rose-500">0</strong></span>
+            <span id="sudStatus">Fill empty cells with 1–9</span>
+          </div>
+          <div id="sudGrid" class="grid grid-cols-9 bg-slate-800 dark:bg-slate-600 p-1 rounded-xl w-full aspect-square max-w-[330px] shadow-md"></div>
+          <div id="sudPad" class="grid grid-cols-5 gap-1.5 w-full max-w-[330px]">
+            ${[1,2,3,4,5,6,7,8,9].map(n => `<button data-num="${n}" class="sud-num py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-extrabold text-sm hover:bg-indigo-600 hover:text-white transition-colors">${n}</button>`).join('')}
+            <button data-num="0" class="sud-num py-2.5 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 font-extrabold text-xs">Clear</button>
+          </div>
+        </div>
+      `;
+
+      const gridEl = container.querySelector('#sudGrid');
+
+      function inputNumber(num) {
+        const [r, c] = selected;
+        if (fixed[r][c]) return;
+        puzzle[r][c] = num;
+
+        if (num !== 0 && num !== solution[r][c]) {
+          mistakes++;
+          container.querySelector('#sudMistakes').textContent = mistakes;
+        }
+
+        // Calculate score & check completion
+        let correctCount = 0;
+        let allFilled = true;
+        for (let i = 0; i < 9; i++) {
+          for (let j = 0; j < 9; j++) {
+            if (puzzle[i][j] === 0) allFilled = false;
+            if (!fixed[i][j] && puzzle[i][j] === solution[i][j]) correctCount++;
+          }
+        }
+        const score = Math.max(0, correctCount * 25 - mistakes * 20);
+        updateGameScore(score);
+
+        if (allFilled && correctCount === 38) {
+          container.querySelector('#sudStatus').innerHTML = `<span class="text-emerald-500 font-bold">🎉 Sudoku Solved!</span>`;
+        }
+        render();
+      }
+
+      function render() {
+        gridEl.innerHTML = '';
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            const val = puzzle[r][c];
+            const isSel = selected[0] === r && selected[1] === c;
+            const isWrong = val !== 0 && val !== solution[r][c];
+
+            const cell = document.createElement('button');
+            cell.className = `flex items-center justify-center text-sm font-bold border border-slate-200/70 dark:border-slate-700/70 transition-colors ${
+              c % 3 === 2 && c !== 8 ? 'border-r-2 border-r-slate-800 dark:border-r-slate-400' : ''
+            } ${
+              r % 3 === 2 && r !== 8 ? 'border-b-2 border-b-slate-800 dark:border-b-slate-400' : ''
+            } ${
+              isSel
+                ? 'bg-indigo-500/25 dark:bg-indigo-500/35'
+                : 'bg-white dark:bg-slate-900'
+            } ${
+              fixed[r][c]
+                ? 'text-slate-900 dark:text-slate-100 font-extrabold'
+                : isWrong
+                  ? 'text-rose-500'
+                  : 'text-indigo-600 dark:text-indigo-400'
+            }`;
+            cell.textContent = val || '';
+            cell.addEventListener('click', () => {
+              selected = [r, c];
+              render();
+            });
+            gridEl.appendChild(cell);
+          }
+        }
+      }
+
+      container.querySelectorAll('.sud-num').forEach(btn => {
+        btn.addEventListener('click', () => inputNumber(Number(btn.dataset.num)));
+      });
+
+      function onKey(e) {
+        if (e.key >= '1' && e.key <= '9') inputNumber(Number(e.key));
+        else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') inputNumber(0);
+      }
+      window.addEventListener('keydown', onKey);
+
+      render();
+      return () => window.removeEventListener('keydown', onKey);
+    }
+
+    /*************************************************************************
+     * GAME 8: COLOR MATCH (Stroop Effect Reflex Challenge)
+     *************************************************************************/
+    function initColorMatch(container) {
+      const PALETTE = [
+        { name: 'RED', hex: '#ef4444' },
+        { name: 'BLUE', hex: '#3b82f6' },
+        { name: 'GREEN', hex: '#10b981' },
+        { name: 'YELLOW', hex: '#eab308' },
+        { name: 'PURPLE', hex: '#a855f7' }
+      ];
+
+      let score = 0;
+      let streak = 0;
+      let timeLeft = 100;
+      let currentMatch = false;
+      let gameOver = false;
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-5 w-full max-w-sm text-center">
+          <div class="w-full bg-slate-200 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
+            <div id="cmBar" class="h-full bg-gradient-to-r from-indigo-500 to-pink-500 transition-all duration-75" style="width: 100%"></div>
+          </div>
+
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Does the WORD match its INK COLOR?
+          </div>
+
+          <div class="w-full py-10 px-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
+            <div id="cmWord" class="text-5xl font-black tracking-wide select-none">RED</div>
+          </div>
+
+          <div id="cmFeedback" class="text-xs font-bold text-slate-500 dark:text-slate-400 h-4">Streak: 0</div>
+
+          <div id="cmControls" class="grid grid-cols-2 gap-3 w-full">
+            <button id="cmNoBtn" class="py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-extrabold text-base shadow-lg shadow-rose-500/20 transition-all">
+              ✕ NO MATCH
+            </button>
+            <button id="cmYesBtn" class="py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-extrabold text-base shadow-lg shadow-emerald-500/20 transition-all">
+              ✓ MATCH
+            </button>
+          </div>
+        </div>
+      `;
+
+      const wordEl = container.querySelector('#cmWord');
+      const barEl = container.querySelector('#cmBar');
+      const feedbackEl = container.querySelector('#cmFeedback');
+
+      function nextRound() {
+        const wordObj = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+        currentMatch = Math.random() < 0.5;
+        let inkObj = wordObj;
+        if (!currentMatch) {
+          const others = PALETTE.filter(p => p.name !== wordObj.name);
+          inkObj = others[Math.floor(Math.random() * others.length)];
+        }
+        wordEl.textContent = wordObj.name;
+        wordEl.style.color = inkObj.hex;
+      }
+
+      function answer(userSaysMatch) {
+        if (gameOver) return;
+        if (userSaysMatch === currentMatch) {
+          streak++;
+          score += 10 + Math.min(streak * 2, 30);
+          timeLeft = Math.min(100, timeLeft + 14);
+          feedbackEl.innerHTML = `<span class="text-emerald-500">🔥 Correct! Streak: ${streak}</span>`;
+          updateGameScore(score);
+          nextRound();
+        } else {
+          endGame('Wrong choice!');
+        }
+      }
+
+      function endGame(reason) {
+        gameOver = true;
+        feedbackEl.innerHTML = `<span class="text-rose-500">${reason} Final Score: ${score}</span>`;
+      }
+
+      const timer = setInterval(() => {
+        if (gameOver) return;
+        const drain = 1.6 + Math.min(score / 400, 1.8);
+        timeLeft -= drain;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          barEl.style.width = '0%';
+          endGame("Time's up!");
+        } else {
+          barEl.style.width = `${timeLeft}%`;
+        }
+      }, 60);
+
+      function onKey(e) {
+        if (e.key === 'ArrowLeft') answer(false);
+        else if (e.key === 'ArrowRight') answer(true);
+      }
+
+      container.querySelector('#cmNoBtn').addEventListener('click', () => answer(false));
+      container.querySelector('#cmYesBtn').addEventListener('click', () => answer(true));
+      window.addEventListener('keydown', onKey);
+
+      nextRound();
+      return () => {
+        clearInterval(timer);
+        window.removeEventListener('keydown', onKey);
+      };
+    }
+
+    /*************************************************************************
+     * GAME 9: FLAPPY BIRD (Smooth HTML5 Canvas Side-Scroller)
+     *************************************************************************/
+    function initFlappyBird(container) {
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-3">
+          <div class="relative rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-slate-700 shadow-lg">
+            <canvas id="flappyCanvas" width="320" height="440" class="cursor-pointer"></canvas>
+            <div id="flappyOver" class="hidden absolute inset-0 bg-slate-950/75 flex flex-col items-center justify-center text-white p-4 text-center">
+              <div class="text-2xl font-extrabold text-amber-400">Game Over</div>
+              <div id="flappyFinal" class="text-sm text-slate-200 mt-1 mb-4"></div>
+              <button id="flappyRetry" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 font-bold text-xs">Fly Again</button>
+            </div>
+          </div>
+          <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Tap canvas or press Space / Up Arrow to flap</div>
+        </div>
+      `;
+
+      const canvas = container.querySelector('#flappyCanvas');
+      const ctx = canvas.getContext('2d');
+
+      let birdY = 200, velocity = 0;
+      const gravity = 0.42, jump = -7.2;
+      let pipes = [];
+      let frame = 0, score = 0, started = false, over = false, animId = null;
+
+      function flap() {
+        if (over) return;
+        started = true;
+        velocity = jump;
+      }
+
+      function spawnPipe() {
+        const gap = 122;
+        const topH = Math.floor(Math.random() * 190) + 55;
+        pipes.push({ x: canvas.width, top: topH, bottom: topH + gap, passed: false });
+      }
+
+      function update() {
+        // Sky background
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#0ea5e9');
+        grad.addColorStop(1, '#bae6fd');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (started && !over) {
+          velocity += gravity;
+          birdY += velocity;
+          frame++;
+          if (frame % 95 === 0) spawnPipe();
+
+          pipes.forEach(p => {
+            p.x -= 2.6;
+            // Score check
+            if (!p.passed && p.x + 44 < 70) {
+              p.passed = true;
+              score++;
+              updateGameScore(score);
+            }
+            // Collision check
+            if (70 + 13 > p.x && 70 - 13 < p.x + 44) {
+              if (birdY - 13 < p.top || birdY + 13 > p.bottom) {
+                endFlappy();
+              }
+            }
+          });
+          pipes = pipes.filter(p => p.x > -60);
+
+          if (birdY + 13 > canvas.height - 24 || birdY - 13 < 0) {
+            endFlappy();
+          }
+        }
+
+        // Draw pipes
+        pipes.forEach(p => {
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(p.x, 0, 44, p.top);
+          ctx.fillRect(p.x, p.bottom, 44, canvas.height - p.bottom);
+          ctx.fillStyle = '#059669';
+          ctx.fillRect(p.x - 3, p.top - 14, 50, 14);
+          ctx.fillRect(p.x - 3, p.bottom, 50, 14);
+        });
+
+        // Ground strip
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(0, canvas.height - 24, canvas.width, 24);
+
+        // Bird
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(70, birdY, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(75, birdY - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(76, birdY - 4, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.moveTo(82, birdY - 2);
+        ctx.lineTo(91, birdY + 2);
+        ctx.lineTo(82, birdY + 6);
+        ctx.fill();
+
+        if (!started) {
+          ctx.fillStyle = 'rgba(15,23,42,0.75)';
+          ctx.roundRect(65, 250, 190, 38, 12);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 13px Plus Jakarta Sans, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Tap or Press Space to Start', 160, 274);
+        }
+
+        if (!over) animId = requestAnimationFrame(update);
+      }
+
+      function endFlappy() {
+        over = true;
+        container.querySelector('#flappyFinal').textContent = `Pipes Cleared: ${score}`;
+        container.querySelector('#flappyOver').classList.remove('hidden');
+      }
+
+      function onKey(e) {
+        if (e.key === ' ' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          flap();
+        }
+      }
+
+      canvas.addEventListener('pointerdown', flap);
+      window.addEventListener('keydown', onKey);
+      container.querySelector('#flappyRetry').addEventListener('click', () => openGameModal('flappy-bird'));
+
+      animId = requestAnimationFrame(update);
+      return () => {
+        cancelAnimationFrame(animId);
+        window.removeEventListener('keydown', onKey);
+      };
+    }
+
+    /*************************************************************************
+     * GAME 10: SLIDING PICTURE PUZZLE (3x3 Artwork Tile Puzzle)
+     *************************************************************************/
+    function initPuzzleGame(container) {
+      const SIZE = 3; // 3x3 sliding puzzle
+      let tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+      let moves = 0;
+      let solved = false;
+      let showNumbers = true;
+
+      // Solvable shuffle by performing valid random moves from solved state
+      function shufflePuzzle() {
+        tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+        let emptyIdx = 8;
+        let lastIdx = -1;
+        for (let i = 0; i < 80; i++) {
+          const neighbors = getNeighbors(emptyIdx).filter(n => n !== lastIdx);
+          const pick = neighbors[Math.floor(Math.random() * neighbors.length)];
+          [tiles[emptyIdx], tiles[pick]] = [tiles[pick], tiles[emptyIdx]];
+          lastIdx = emptyIdx;
+          emptyIdx = pick;
+        }
+      }
+
+      function getNeighbors(idx) {
+        const r = Math.floor(idx / SIZE), c = idx % SIZE;
+        const res = [];
+        if (r > 0) res.push(idx - SIZE);
+        if (r < SIZE - 1) res.push(idx + SIZE);
+        if (c > 0) res.push(idx - 1);
+        if (c < SIZE - 1) res.push(idx + 1);
+        return res;
+      }
+
+      function checkSolved() {
+        for (let i = 0; i < 8; i++) {
+          if (tiles[i] !== i + 1) return false;
+        }
+        return true;
+      }
+
+      // Generate a vibrant geometric sunset landscape data URL via offscreen canvas
+      const artCanvas = document.createElement('canvas');
+      artCanvas.width = 300;
+      artCanvas.height = 300;
+      const actx = artCanvas.getContext('2d');
+      const sky = actx.createLinearGradient(0, 0, 300, 300);
+      sky.addColorStop(0, '#4f46e5');
+      sky.addColorStop(0.5, '#ec4899');
+      sky.addColorStop(1, '#f59e0b');
+      actx.fillStyle = sky;
+      actx.fillRect(0, 0, 300, 300);
+      // Sun
+      actx.fillStyle = '#fef08a';
+      actx.beginPath();
+      actx.arc(150, 125, 55, 0, Math.PI * 2);
+      actx.fill();
+      // Mountains
+      actx.fillStyle = '#312e81';
+      actx.beginPath();
+      actx.moveTo(0, 260); actx.lineTo(95, 135); actx.lineTo(195, 260);
+      actx.fill();
+      actx.fillStyle = '#1e1b4b';
+      actx.beginPath();
+      actx.moveTo(110, 260); actx.lineTo(220, 120); actx.lineTo(300, 260);
+      actx.fill();
+      // Foreground lake
+      actx.fillStyle = '#0f172a';
+      actx.fillRect(0, 255, 300, 45);
+      const artURL = artCanvas.toDataURL();
+
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-4 w-full max-w-sm">
+          <div class="flex items-center justify-between w-full px-1">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Moves: <strong id="puzMoves" class="text-indigo-500">0</strong></span>
+            <button id="puzToggleNum" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+              Hide Numbers
+            </button>
+          </div>
+
+          <div id="puzBoard" class="grid grid-cols-3 gap-1.5 p-2 rounded-2xl bg-slate-300 dark:bg-slate-800 w-full aspect-square max-w-[320px] shadow-inner"></div>
+
+          <div id="puzStatus" class="text-xs font-semibold text-slate-500 dark:text-slate-400">Slide tiles to complete the sunset artwork!</div>
+        </div>
+      `;
+
+      const boardEl = container.querySelector('#puzBoard');
+      const toggleBtn = container.querySelector('#puzToggleNum');
+
+      toggleBtn.addEventListener('click', () => {
+        showNumbers = !showNumbers;
+        toggleBtn.textContent = showNumbers ? 'Hide Numbers' : 'Show Numbers';
+        render();
+      });
+
+      function render() {
+        boardEl.innerHTML = '';
+        tiles.forEach((val, idx) => {
+          const tile = document.createElement('button');
+          tile.className = 'rounded-xl relative overflow-hidden flex items-center justify-center font-black text-xl text-white shadow-sm transition-transform active:scale-95';
+          if (val === 0) {
+            tile.classList.add('bg-slate-200/50', 'dark:bg-slate-900/50', 'cursor-default');
+          } else {
+            const origRow = Math.floor((val - 1) / SIZE);
+            const origCol = (val - 1) % SIZE;
+            tile.style.backgroundImage = `url(${artURL})`;
+            tile.style.backgroundSize = '300% 300%';
+            tile.style.backgroundPosition = `${origCol * 50}% ${origRow * 50}%`;
+            if (showNumbers) {
+              tile.innerHTML = `<span class="w-8 h-8 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center text-sm">${val}</span>`;
+            }
+            tile.addEventListener('click', () => moveTile(idx));
+          }
+          boardEl.appendChild(tile);
+        });
+      }
+
+      function moveTile(idx) {
+        if (solved) return;
+        const emptyIdx = tiles.indexOf(0);
+        if (getNeighbors(emptyIdx).includes(idx)) {
+          [tiles[emptyIdx], tiles[idx]] = [tiles[idx], tiles[emptyIdx]];
+          moves++;
+          container.querySelector('#puzMoves').textContent = moves;
+
+          if (checkSolved()) {
+            solved = true;
+            const score = Math.max(200, 1500 - moves * 15);
+            updateGameScore(score);
+            container.querySelector('#puzStatus').innerHTML = `<span class="text-emerald-500 font-bold">🎉 Puzzle Solved in ${moves} moves! Score: ${score}</span>`;
+          }
+          render();
+        }
+      }
+
+      shufflePuzzle();
+      render();
+      return () => {};
+    }
+
+    /*************************************************************************
+     * 5. BOOTSTRAP APP
+     *************************************************************************/
+    initTheme();
+    setCategory('All');
+    updateStatsUI();
+    switchView('home');
+  </script>
+</body>
+</html>
